@@ -1,0 +1,875 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+ <= read (data resources)
+
+Terraform will perform the following actions:
+
+  # data.aws_iam_policy_document.deploy["production"] will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "deploy" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "acm:*",
+              + "application-autoscaling:*",
+              + "cloudwatch:*",
+              + "ec2:*",
+              + "ecr:DescribeImages",
+              + "ecr:DescribeRepositories",
+              + "ecr:ListImages",
+              + "ecs:*",
+              + "elasticloadbalancing:*",
+              + "kms:CreateGrant",
+              + "kms:DescribeKey",
+              + "kms:ListAliases",
+              + "logs:*",
+              + "rds:*",
+              + "secretsmanager:*",
+              + "sns:*",
+              + "ssm:*",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "RegionalServices"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "eu-west-1",
+                ]
+              + variable = "aws:RequestedRegion"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "secretsmanager:GetSecretValue",
+            ]
+          + effect    = "Deny"
+          + resources = [
+              + "*",
+            ]
+          + sid       = "DenySecretValues"
+        }
+      + statement {
+          + actions   = [
+              + "route53:ChangeResourceRecordSets",
+              + "route53:GetChange",
+              + "route53:GetHostedZone",
+              + "route53:ListResourceRecordSets",
+              + "route53:ListTagsForResource",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "Route53Records"
+        }
+      + statement {
+          + actions   = [
+              + "iam:AttachRolePolicy",
+              + "iam:CreateRole",
+              + "iam:DeleteRole",
+              + "iam:DeleteRolePolicy",
+              + "iam:DetachRolePolicy",
+              + "iam:GetRole",
+              + "iam:GetRolePolicy",
+              + "iam:ListAttachedRolePolicies",
+              + "iam:ListInstanceProfilesForRole",
+              + "iam:ListRolePolicies",
+              + "iam:PutRolePolicy",
+              + "iam:TagRole",
+              + "iam:UntagRole",
+              + "iam:UpdateAssumeRolePolicy",
+              + "iam:UpdateRole",
+            ]
+          + resources = [
+              + "arn:aws:iam::111122223333:role/ea-foods-production-*",
+            ]
+          + sid       = "ManageEnvironmentRoles"
+        }
+      + statement {
+          + actions   = [
+              + "iam:PassRole",
+            ]
+          + resources = [
+              + "arn:aws:iam::111122223333:role/ea-foods-production-*",
+            ]
+          + sid       = "PassRolesToEcsOnly"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "ecs-tasks.amazonaws.com",
+                  + "monitoring.rds.amazonaws.com",
+                ]
+              + variable = "iam:PassedToService"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "iam:CreateServiceLinkedRole",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "ServiceLinkedRoles"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "ecs.amazonaws.com",
+                  + "elasticloadbalancing.amazonaws.com",
+                  + "rds.amazonaws.com",
+                  + "ecs.application-autoscaling.amazonaws.com",
+                ]
+              + variable = "iam:AWSServiceName"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "s3:ListBucket",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "StateList"
+
+          + condition {
+              + test     = "StringLike"
+              + values   = [
+                  + "production/*",
+                ]
+              + variable = "s3:prefix"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "s3:DeleteObject",
+              + "s3:GetObject",
+              + "s3:PutObject",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "StateReadWrite"
+        }
+    }
+
+  # data.aws_iam_policy_document.deploy["staging"] will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "deploy" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "acm:*",
+              + "application-autoscaling:*",
+              + "cloudwatch:*",
+              + "ec2:*",
+              + "ecr:DescribeImages",
+              + "ecr:DescribeRepositories",
+              + "ecr:ListImages",
+              + "ecs:*",
+              + "elasticloadbalancing:*",
+              + "kms:CreateGrant",
+              + "kms:DescribeKey",
+              + "kms:ListAliases",
+              + "logs:*",
+              + "rds:*",
+              + "secretsmanager:*",
+              + "sns:*",
+              + "ssm:*",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "RegionalServices"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "eu-west-1",
+                ]
+              + variable = "aws:RequestedRegion"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "secretsmanager:GetSecretValue",
+            ]
+          + effect    = "Deny"
+          + resources = [
+              + "*",
+            ]
+          + sid       = "DenySecretValues"
+        }
+      + statement {
+          + actions   = [
+              + "route53:ChangeResourceRecordSets",
+              + "route53:GetChange",
+              + "route53:GetHostedZone",
+              + "route53:ListResourceRecordSets",
+              + "route53:ListTagsForResource",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "Route53Records"
+        }
+      + statement {
+          + actions   = [
+              + "iam:AttachRolePolicy",
+              + "iam:CreateRole",
+              + "iam:DeleteRole",
+              + "iam:DeleteRolePolicy",
+              + "iam:DetachRolePolicy",
+              + "iam:GetRole",
+              + "iam:GetRolePolicy",
+              + "iam:ListAttachedRolePolicies",
+              + "iam:ListInstanceProfilesForRole",
+              + "iam:ListRolePolicies",
+              + "iam:PutRolePolicy",
+              + "iam:TagRole",
+              + "iam:UntagRole",
+              + "iam:UpdateAssumeRolePolicy",
+              + "iam:UpdateRole",
+            ]
+          + resources = [
+              + "arn:aws:iam::111122223333:role/ea-foods-staging-*",
+            ]
+          + sid       = "ManageEnvironmentRoles"
+        }
+      + statement {
+          + actions   = [
+              + "iam:PassRole",
+            ]
+          + resources = [
+              + "arn:aws:iam::111122223333:role/ea-foods-staging-*",
+            ]
+          + sid       = "PassRolesToEcsOnly"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "ecs-tasks.amazonaws.com",
+                  + "monitoring.rds.amazonaws.com",
+                ]
+              + variable = "iam:PassedToService"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "iam:CreateServiceLinkedRole",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "ServiceLinkedRoles"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "ecs.amazonaws.com",
+                  + "elasticloadbalancing.amazonaws.com",
+                  + "rds.amazonaws.com",
+                  + "ecs.application-autoscaling.amazonaws.com",
+                ]
+              + variable = "iam:AWSServiceName"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "s3:ListBucket",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "StateList"
+
+          + condition {
+              + test     = "StringLike"
+              + values   = [
+                  + "staging/*",
+                ]
+              + variable = "s3:prefix"
+            }
+        }
+      + statement {
+          + actions   = [
+              + "s3:DeleteObject",
+              + "s3:GetObject",
+              + "s3:PutObject",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "StateReadWrite"
+        }
+    }
+
+  # data.aws_iam_policy_document.ecr_push will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "ecr_push" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "ecr:GetAuthorizationToken",
+            ]
+          + resources = [
+              + "*",
+            ]
+        }
+      + statement {
+          + actions   = [
+              + "ecr:BatchCheckLayerAvailability",
+              + "ecr:BatchGetImage",
+              + "ecr:CompleteLayerUpload",
+              + "ecr:DescribeImages",
+              + "ecr:GetDownloadUrlForLayer",
+              + "ecr:InitiateLayerUpload",
+              + "ecr:PutImage",
+              + "ecr:UploadLayerPart",
+            ]
+          + resources = [
+              + (known after apply),
+              + (known after apply),
+            ]
+        }
+    }
+
+  # data.aws_iam_policy_document.plan will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "plan" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "kms:Decrypt",
+              + "secretsmanager:GetSecretValue",
+              + "ssm:GetParameter*",
+            ]
+          + effect    = "Deny"
+          + resources = [
+              + "*",
+            ]
+          + sid       = "DenySecretValues"
+        }
+      + statement {
+          + actions   = [
+              + "s3:GetObject",
+              + "s3:ListBucket",
+            ]
+          + resources = [
+              + (known after apply),
+              + (known after apply),
+            ]
+          + sid       = "StateRead"
+        }
+      + statement {
+          + actions   = [
+              + "s3:DeleteObject",
+              + "s3:PutObject",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "StateLockOnly"
+        }
+    }
+
+  # aws_ecr_lifecycle_policy.service["notify-svc"] will be created
+  + resource "aws_ecr_lifecycle_policy" "service" {
+      + id          = (known after apply)
+      + policy      = jsonencode(
+            {
+              + rules = [
+                  + {
+                      + action       = {
+                          + type = "expire"
+                        }
+                      + description  = "Remove untagged layers after 7 days"
+                      + rulePriority = 1
+                      + selection    = {
+                          + countNumber = 7
+                          + countType   = "sinceImagePushed"
+                          + countUnit   = "days"
+                          + tagStatus   = "untagged"
+                        }
+                    },
+                  + {
+                      + action       = {
+                          + type = "expire"
+                        }
+                      + description  = "Keep the last 30 images (rollback window)"
+                      + rulePriority = 2
+                      + selection    = {
+                          + countNumber = 30
+                          + countType   = "imageCountMoreThan"
+                          + tagStatus   = "any"
+                        }
+                    },
+                ]
+            }
+        )
+      + region      = "eu-west-1"
+      + registry_id = (known after apply)
+      + repository  = "ea-foods/notify-svc"
+    }
+
+  # aws_ecr_lifecycle_policy.service["orders-api"] will be created
+  + resource "aws_ecr_lifecycle_policy" "service" {
+      + id          = (known after apply)
+      + policy      = jsonencode(
+            {
+              + rules = [
+                  + {
+                      + action       = {
+                          + type = "expire"
+                        }
+                      + description  = "Remove untagged layers after 7 days"
+                      + rulePriority = 1
+                      + selection    = {
+                          + countNumber = 7
+                          + countType   = "sinceImagePushed"
+                          + countUnit   = "days"
+                          + tagStatus   = "untagged"
+                        }
+                    },
+                  + {
+                      + action       = {
+                          + type = "expire"
+                        }
+                      + description  = "Keep the last 30 images (rollback window)"
+                      + rulePriority = 2
+                      + selection    = {
+                          + countNumber = 30
+                          + countType   = "imageCountMoreThan"
+                          + tagStatus   = "any"
+                        }
+                    },
+                ]
+            }
+        )
+      + region      = "eu-west-1"
+      + registry_id = (known after apply)
+      + repository  = "ea-foods/orders-api"
+    }
+
+  # aws_ecr_repository.service["notify-svc"] will be created
+  + resource "aws_ecr_repository" "service" {
+      + arn                  = (known after apply)
+      + id                   = (known after apply)
+      + image_tag_mutability = "IMMUTABLE"
+      + name                 = "ea-foods/notify-svc"
+      + region               = "eu-west-1"
+      + registry_id          = (known after apply)
+      + repository_url       = (known after apply)
+      + tags_all             = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+
+      + encryption_configuration {
+          + encryption_type = "KMS"
+          + kms_key         = (known after apply)
+        }
+
+      + image_scanning_configuration {
+          + scan_on_push = true
+        }
+    }
+
+  # aws_ecr_repository.service["orders-api"] will be created
+  + resource "aws_ecr_repository" "service" {
+      + arn                  = (known after apply)
+      + id                   = (known after apply)
+      + image_tag_mutability = "IMMUTABLE"
+      + name                 = "ea-foods/orders-api"
+      + region               = "eu-west-1"
+      + registry_id          = (known after apply)
+      + repository_url       = (known after apply)
+      + tags_all             = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+
+      + encryption_configuration {
+          + encryption_type = "KMS"
+          + kms_key         = (known after apply)
+        }
+
+      + image_scanning_configuration {
+          + scan_on_push = true
+        }
+    }
+
+  # aws_iam_role.deploy["production"] will be created
+  + resource "aws_iam_role" "deploy" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRoleWithWebIdentity"
+                      + Condition = {
+                          + StringEquals = {
+                              + "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+                              + "token.actions.githubusercontent.com:sub" = "repo:Emmacontrol/ea-foods-devops:environment:production"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Federated = "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "ea-foods-gha-deploy-production"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role.deploy["staging"] will be created
+  + resource "aws_iam_role" "deploy" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRoleWithWebIdentity"
+                      + Condition = {
+                          + StringEquals = {
+                              + "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+                              + "token.actions.githubusercontent.com:sub" = "repo:Emmacontrol/ea-foods-devops:environment:staging"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Federated = "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "ea-foods-gha-deploy-staging"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role.ecr_push will be created
+  + resource "aws_iam_role" "ecr_push" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRoleWithWebIdentity"
+                      + Condition = {
+                          + StringEquals = {
+                              + "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+                              + "token.actions.githubusercontent.com:sub" = "repo:Emmacontrol/ea-foods-devops:ref:refs/heads/main"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Federated = "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "ea-foods-gha-ecr-push"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role.plan will be created
+  + resource "aws_iam_role" "plan" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRoleWithWebIdentity"
+                      + Condition = {
+                          + StringEquals = {
+                              + "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+                              + "token.actions.githubusercontent.com:sub" = [
+                                  + "repo:Emmacontrol/ea-foods-devops:pull_request",
+                                  + "repo:Emmacontrol/ea-foods-devops:ref:refs/heads/main",
+                                ]
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Federated = "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "ea-foods-gha-plan"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role_policy.deploy["production"] will be created
+  + resource "aws_iam_role_policy" "deploy" {
+      + id          = (known after apply)
+      + name        = "deploy"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy.deploy["staging"] will be created
+  + resource "aws_iam_role_policy" "deploy" {
+      + id          = (known after apply)
+      + name        = "deploy"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy.ecr_push will be created
+  + resource "aws_iam_role_policy" "ecr_push" {
+      + id          = (known after apply)
+      + name        = "ecr-push"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy.plan will be created
+  + resource "aws_iam_role_policy" "plan" {
+      + id          = (known after apply)
+      + name        = "plan"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy_attachment.plan_readonly will be created
+  + resource "aws_iam_role_policy_attachment" "plan_readonly" {
+      + id         = (known after apply)
+      + policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+      + role       = "ea-foods-gha-plan"
+    }
+
+  # aws_s3_bucket.tfstate will be created
+  + resource "aws_s3_bucket" "tfstate" {
+      + acceleration_status         = (known after apply)
+      + acl                         = (known after apply)
+      + arn                         = (known after apply)
+      + bucket                      = "ea-foods-tfstate-111122223333"
+      + bucket_domain_name          = (known after apply)
+      + bucket_namespace            = (known after apply)
+      + bucket_prefix               = (known after apply)
+      + bucket_region               = (known after apply)
+      + bucket_regional_domain_name = (known after apply)
+      + force_destroy               = false
+      + hosted_zone_id              = (known after apply)
+      + id                          = (known after apply)
+      + object_lock_enabled         = (known after apply)
+      + policy                      = (known after apply)
+      + region                      = "eu-west-1"
+      + request_payer               = (known after apply)
+      + tags_all                    = {
+          + "Component" = "bootstrap"
+          + "ManagedBy" = "terraform"
+          + "Project"   = "ea-foods"
+          + "Repo"      = "Emmacontrol/ea-foods-devops"
+        }
+      + website_domain              = (known after apply)
+      + website_endpoint            = (known after apply)
+
+      + cors_rule (known after apply)
+
+      + grant (known after apply)
+
+      + lifecycle_rule (known after apply)
+
+      + logging (known after apply)
+
+      + object_lock_configuration (known after apply)
+
+      + replication_configuration (known after apply)
+
+      + server_side_encryption_configuration (known after apply)
+
+      + versioning (known after apply)
+
+      + website (known after apply)
+    }
+
+  # aws_s3_bucket_lifecycle_configuration.tfstate will be created
+  + resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
+      + bucket                                 = (known after apply)
+      + expected_bucket_owner                  = (known after apply)
+      + id                                     = (known after apply)
+      + region                                 = "eu-west-1"
+      + transition_default_minimum_object_size = "all_storage_classes_128K"
+
+      + rule {
+          + id     = "expire-old-state-versions"
+          + status = "Enabled"
+            # (1 unchanged attribute hidden)
+
+          + abort_incomplete_multipart_upload {
+              + days_after_initiation = 7
+            }
+
+          + filter {
+                # (1 unchanged attribute hidden)
+            }
+
+          + noncurrent_version_expiration {
+              + noncurrent_days = 90
+            }
+        }
+    }
+
+  # aws_s3_bucket_policy.tfstate will be created
+  + resource "aws_s3_bucket_policy" "tfstate" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + policy = (known after apply)
+      + region = "eu-west-1"
+    }
+
+  # aws_s3_bucket_public_access_block.tfstate will be created
+  + resource "aws_s3_bucket_public_access_block" "tfstate" {
+      + block_public_acls       = true
+      + block_public_policy     = true
+      + bucket                  = (known after apply)
+      + id                      = (known after apply)
+      + ignore_public_acls      = true
+      + region                  = "eu-west-1"
+      + restrict_public_buckets = true
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.tfstate will be created
+  + resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "eu-west-1"
+
+      + rule {
+          + blocked_encryption_types = (known after apply)
+          + bucket_key_enabled       = true
+
+          + apply_server_side_encryption_by_default {
+              + kms_master_key_id = (known after apply)
+              + sse_algorithm     = "aws:kms"
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.tfstate will be created
+  + resource "aws_s3_bucket_versioning" "tfstate" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "eu-west-1"
+
+      + versioning_configuration {
+          + mfa_delete = (known after apply)
+          + status     = "Enabled"
+        }
+    }
+
+Plan: 19 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + deploy_role_arns    = {
+      + production = (known after apply)
+      + staging    = (known after apply)
+    }
+  + ecr_push_role_arn   = (known after apply)
+  + ecr_repository_urls = {
+      + notify-svc = (known after apply)
+      + orders-api = (known after apply)
+    }
+  + plan_role_arn       = (known after apply)
+  + tf_state_bucket     = "ea-foods-tfstate-111122223333"
+
+─────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.

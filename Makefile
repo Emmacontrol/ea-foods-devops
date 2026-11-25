@@ -28,8 +28,15 @@ tf-validate: ## terraform fmt + validate for every environment
 	  terraform -chdir=infra/envs/$$env validate; \
 	done
 
-plan: ## terraform plan for ENV (default: staging)
-	terraform -chdir=infra/envs/$(ENV) init -input=false
-	terraform -chdir=infra/envs/$(ENV) plan -input=false
+plan: ## terraform plan for ENV (needs TF_STATE_BUCKET and IMAGE_TAG)
+	@test -n "$(TF_STATE_BUCKET)" || (echo "Set TF_STATE_BUCKET (output of infra/bootstrap)"; exit 1)
+	terraform -chdir=infra/envs/$(ENV) init -input=false -backend-config="bucket=$(TF_STATE_BUCKET)"
+	terraform -chdir=infra/envs/$(ENV) plan -input=false -var image_tag=$(or $(IMAGE_TAG),$(shell git rev-parse --short HEAD))
 
-.PHONY: help up down logs test lint tf-validate plan
+security-scan: ## checkov (Terraform) + trivy (images) + gitleaks (history)
+	checkov -d infra --framework terraform --quiet --compact
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed orders-api:local
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed notify-svc:local
+	gitleaks git . --no-banner
+
+.PHONY: help up down logs test lint tf-validate plan security-scan
