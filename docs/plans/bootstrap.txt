@@ -106,6 +106,7 @@ Terraform will perform the following actions:
               + values   = [
                   + "ecs-tasks.amazonaws.com",
                   + "monitoring.rds.amazonaws.com",
+                  + "vpc-flow-logs.amazonaws.com",
                 ]
               + variable = "iam:PassedToService"
             }
@@ -260,6 +261,7 @@ Terraform will perform the following actions:
               + values   = [
                   + "ecs-tasks.amazonaws.com",
                   + "monitoring.rds.amazonaws.com",
+                  + "vpc-flow-logs.amazonaws.com",
                 ]
               + variable = "iam:PassedToService"
             }
