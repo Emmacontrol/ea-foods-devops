@@ -1,6 +1,7 @@
 # Local environment: both services + MySQL. Mirrors production where it matters:
 # migrations run as a one-off job, containers are non-root with a read-only root FS.
 # Defaults are LOCAL-ONLY throwaway values; override them in a .env file (see .env.example).
+# APP_TAG plays the role of the image tag (git SHA) in AWS: see scripts/local-rollback-demo.sh.
 
 x-hardening: &hardening
   read_only: true
@@ -15,8 +16,8 @@ x-orders-env: &orders-env
   DB_USER: orders
   DB_PASSWORD: ${DB_PASSWORD:-local-dev-password}
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-dev-secret-key}
-  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
-  APP_VERSION: local
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  APP_VERSION: ${APP_TAG:-local}
 
 services:
   mysql:
@@ -37,7 +38,7 @@ services:
   # One-off job, same as the ECS migration task the pipeline runs before each deploy.
   migrate:
     build: ./apps/orders-api
-    image: orders-api:local
+    image: orders-api:${APP_TAG:-local}
     command: ["python", "manage.py", "migrate", "--noinput"]
     environment: *orders-env
     depends_on:
@@ -46,7 +47,7 @@ services:
     <<: *hardening
 
   orders-api:
-    image: orders-api:local
+    image: orders-api:${APP_TAG:-local}
     environment: *orders-env
     ports: ["8000:8000"]
     depends_on:
@@ -56,10 +57,23 @@ services:
 
   notify-svc:
     build: ./apps/notify-svc
-    image: notify-svc:local
+    image: notify-svc:${APP_TAG:-local}
     environment:
-      APP_VERSION: local
+      APP_VERSION: ${APP_TAG:-local}
     ports: ["3000:3000"]
+    <<: *hardening
+
+  # Stand-in for the ALB: http://localhost:8080/orders and /notify on one port.
+  proxy:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    volumes:
+      - ./local/proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8080:8080"]
+    depends_on:
+      orders-api:
+        condition: service_healthy
+      notify-svc:
+        condition: service_healthy
     <<: *hardening
 
 volumes:

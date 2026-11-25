@@ -6,10 +6,13 @@ help: ## Show available commands
 
 up: ## Run both services + MySQL locally
 	docker compose up --build -d
-	@echo "orders-api: http://localhost:8000/orders  notify-svc: http://localhost:3000/notify"
+	@echo "Via local load balancer: http://localhost:8080/orders  http://localhost:8080/notify"
 
 down: ## Stop local stack and remove volumes
 	docker compose down -v
+
+rollback-demo: ## Run the release + automatic/manual rollback flow locally (~3 min)
+	scripts/local-rollback-demo.sh
 
 logs: ## Tail local logs
 	docker compose logs -f
@@ -39,4 +42,4 @@ security-scan: ## checkov (Terraform) + trivy (images) + gitleaks (history)
 	trivy image --severity HIGH,CRITICAL --ignore-unfixed --ignorefile .trivyignore notify-svc:local
 	gitleaks git . --no-banner
 
-.PHONY: help up down logs test lint tf-validate plan security-scan
+.PHONY: help up down rollback-demo logs test lint tf-validate plan security-scan
