@@ -124,11 +124,15 @@ jobs:
         run: |
           tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
           tflint --recursive --chdir infra --config "$GITHUB_WORKSPACE/.tflint.hcl"
-      - uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
+      # Checkov installed at a pinned version (same as local `make security-scan`) rather than
+      # via the action, whose bundled image lags far behind current checks.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          directory: infra
-          framework: terraform
-          quiet: true
+          python-version: "3.13"
+      - name: checkov
+        run: |
+          pip install --quiet checkov==3.4.7
+          checkov -d infra --framework terraform --quiet --compact
 
   terraform-plan:
     name: terraform plan · ${{ matrix.environment }}
