@@ -2,6 +2,6 @@
 Django==5.2.19
 asgiref==3.13.0
 sqlparse==0.6.1
-gunicorn==23.0.0
+gunicorn==27.0.1
 packaging==26.4
 PyMySQL==1.2.4
