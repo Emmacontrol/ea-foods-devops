@@ -28,7 +28,8 @@ function createServer() {
     const { pathname } = new URL(req.url, 'http://localhost');
     const [status, body] = route(req.method, pathname);
 
-    res.writeHead(status, { 'content-type': 'application/json' });
+    // x-app-version lets the deploy smoke test confirm which release is serving traffic.
+    res.writeHead(status, { 'content-type': 'application/json', 'x-app-version': VERSION });
     res.end(JSON.stringify(body));
 
     // Requirement: log a message for every request.

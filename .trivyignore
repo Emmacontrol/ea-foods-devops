@@ -1,0 +1,8 @@
+# Accepted, time-boxed vulnerability exceptions. Every entry needs a reason and an expiry;
+# after the expiry date the CI scan fails again and the exception must be re-justified.
+
+# libzstd1 (Debian 13), information disclosure in zstd decompression. Fixed in
+# 1.5.7+dfsg-1+deb13u1, but python:3.13-slim and distroless/nodejs24-debian13 have not been
+# rebuilt yet (distroless cannot be patched with apt). Neither service decompresses untrusted
+# zstd data. Dependabot raises a PR when the rebuilt base image digest lands.
+CVE-2026-124851 exp:2026-12-31

@@ -1,0 +1,33 @@
+# Manual one-click rollback: Actions -> Rollback -> Run workflow.
+# Redeploys an earlier immutable image through the same path as a normal deploy
+# (production still requires an approver).
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to roll back
+        type: choice
+        options: [staging, production]
+        required: true
+      image_tag:
+        description: Git SHA to roll back to. Leave empty for the release before the current one.
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+run-name: Rollback ${{ inputs.environment }} to ${{ inputs.image_tag || 'previous release' }}
+
+jobs:
+  rollback:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      image_tag: ${{ inputs.image_tag }}
+      rollback: true
+    permissions:
+      contents: read
+      id-token: write
