@@ -106,3 +106,50 @@ resource "aws_vpc_endpoint" "s3" {
   route_table_ids   = aws_route_table.private[*].id
   tags              = { Name = "${var.name}-s3" }
 }
+
+# ---------------------------------------------------------------- VPC flow logs
+# Record of every accepted/rejected connection: needed to investigate a security incident.
+
+resource "aws_cloudwatch_log_group" "flow_logs" {
+  #checkov:skip=CKV_AWS_158:Encrypted at rest with an AWS-owned key by default.
+  #checkov:skip=CKV_AWS_338:Retention is a deliberate cost choice (7 days staging, 30 days production).
+  name              = "/vpc/${var.name}/flow-logs"
+  retention_in_days = var.flow_log_retention_days
+}
+
+data "aws_iam_policy_document" "flow_logs_trust" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "flow_logs" {
+  name               = "${var.name}-flow-logs"
+  assume_role_policy = data.aws_iam_policy_document.flow_logs_trust.json
+}
+
+data "aws_iam_policy_document" "flow_logs" {
+  statement {
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+    resources = ["${aws_cloudwatch_log_group.flow_logs.arn}:*"]
+  }
+}
+
+resource "aws_iam_role_policy" "flow_logs" {
+  name   = "flow-logs"
+  role   = aws_iam_role.flow_logs.id
+  policy = data.aws_iam_policy_document.flow_logs.json
+}
+
+resource "aws_flow_log" "this" {
+  vpc_id                   = aws_vpc.this.id
+  traffic_type             = "ALL"
+  log_destination_type     = "cloud-watch-logs"
+  log_destination          = aws_cloudwatch_log_group.flow_logs.arn
+  iam_role_arn             = aws_iam_role.flow_logs.arn
+  max_aggregation_interval = 600
+}

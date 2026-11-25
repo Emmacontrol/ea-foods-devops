@@ -18,6 +18,8 @@ module "network" {
   cidr_block         = var.vpc_cidr
   az_count           = 2
   single_nat_gateway = var.single_nat_gateway
+
+  flow_log_retention_days = var.log_retention_days
 }
 
 module "alb" {
@@ -71,6 +73,7 @@ ephemeral "random_password" "django_secret_key" {
 }
 
 resource "aws_secretsmanager_secret" "django_secret_key" {
+  #checkov:skip=CKV2_AWS_57:Rotated by bumping secret_string_wo_version; automatic rotation needs a Lambda and Django has no sessions to invalidate here.
   #checkov:skip=CKV_AWS_149:Encrypted with the AWS-managed Secrets Manager key; a CMK would add cost and key-policy management.
   name                    = "${local.name}/orders-api/django-secret-key"
   recovery_window_in_days = 7

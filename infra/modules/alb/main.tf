@@ -60,6 +60,7 @@ resource "aws_vpc_security_group_ingress_rule" "http" {
 # ---------------------------------------------------------------- load balancer + listeners
 
 resource "aws_lb" "this" {
+  #checkov:skip=CKV2_AWS_28:WAF (AWS managed rule groups + rate limiting) is the first item under next steps in README.
   #checkov:skip=CKV_AWS_91:Access logs need an S3 bucket with an ELB delivery policy; listed under next steps in README.
   #checkov:skip=CKV_AWS_150:Enabled in production via var.deletion_protection.
   name                       = var.name

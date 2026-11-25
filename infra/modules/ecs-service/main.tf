@@ -110,6 +110,7 @@ resource "aws_vpc_security_group_egress_rule" "https_out" {
 # ---------------------------------------------------------------- ALB routing
 
 resource "aws_lb_target_group" "this" {
+  #checkov:skip=CKV_AWS_378:TLS terminates at the ALB; ALB-to-task traffic stays inside private subnets. End-to-end TLS listed under next steps.
   name                 = var.name
   port                 = var.container_port
   protocol             = "HTTP"

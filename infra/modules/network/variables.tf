@@ -15,3 +15,7 @@ variable "single_nat_gateway" {
   description = "true: one shared NAT (cheaper, staging). false: one NAT per AZ (no cross-AZ single point of failure, production)."
   type        = bool
 }
+
+variable "flow_log_retention_days" {
+  type = number
+}

@@ -2,6 +2,9 @@
 # Locking uses S3 native lockfiles (Terraform >= 1.10), so no DynamoDB table is needed.
 
 resource "aws_s3_bucket" "tfstate" {
+  #checkov:skip=CKV_AWS_18:Access to state is audited with CloudTrail; server access logs would need a second bucket.
+  #checkov:skip=CKV_AWS_144:Versioning protects against corruption/deletion; cross-region replication listed under next steps.
+  #checkov:skip=CKV2_AWS_62:Event notifications are not needed for a state bucket.
   bucket = "ea-foods-tfstate-${data.aws_caller_identity.current.account_id}"
 
   lifecycle {
