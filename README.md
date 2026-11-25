@@ -35,8 +35,8 @@ Requirements: Docker with Compose v2.
 
 ```bash
 make up                       # build images, start MySQL, run migrations (one-off job), start both services
-curl -i localhost:8000/orders # 3 seeded orders read from MySQL; X-App-Version header
-curl -i localhost:3000/notify # {"status":"sent",...}, and one JSON log line per request
+curl -i localhost:8080/orders # 3 seeded orders read from MySQL; X-App-Version header
+curl -i localhost:8080/notify # {"status":"sent",...}, and one JSON log line per request
 curl localhost:8000/health    # {"status": "ok", "service": "orders-api", "version": "local"}
 make logs                     # tail logs
 make down                     # stop and delete the local database volume
@@ -44,6 +44,7 @@ make down                     # stop and delete the local database volume
 
 | Command | What it runs |
 |---|---|
+| `make rollback-demo` | Runs the release and rollback flow locally: see [Rollback](#rollback) |
 | `make test` | pytest (orders-api, SQLite) and `node:test` (notify-svc) |
 | `make lint` | pre-commit: ruff, hadolint, terraform fmt/tflint, gitleaks |
 | `make tf-validate` | `terraform fmt -check` plus `validate` for both environments |
@@ -54,7 +55,7 @@ make down                     # stop and delete the local database volume
 | orders-api | `python:3.13-slim`, pip removed | ~177 MB | uid 10001 |
 | notify-svc | `gcr.io/distroless/nodejs24-debian13:nonroot` (no shell, no package manager) | ~162 MB | uid 65532 |
 
-Both Dockerfiles are multi-stage. Build tools stay in the build stage, and application code is owned by root, so the app user can't modify it. The local containers mirror production hardening: read-only root filesystem, all Linux capabilities dropped, `no-new-privileges`, and migrations run as a one-off job.
+Both Dockerfiles are multi-stage. Build tools stay in the build stage, and application code is owned by root, so the app user can't modify it. Port 8080 is a small nginx proxy standing in for the ALB: it routes `/orders` and `/notify` on one port and returns 404 for anything else. Each service is also exposed directly (8000, 3000). The local containers mirror production hardening: read-only root filesystem, all Linux capabilities dropped, `no-new-privileges`, and migrations run as a one-off job.
 
 ## Architecture
 
@@ -108,7 +109,11 @@ Outbound traffic (image pulls, AWS APIs) goes through NAT. A free S3 gateway end
 
 ## Deploy
 
-Nothing in this repository has been applied; the [plan output](docs/plans) shows what would be created. To deploy it for real:
+Nothing in this repository has been applied, as the brief allows; the [plan output](docs/plans) shows what would be created.
+
+> **What runs on GitHub today:** every pull request runs lint, tests, image builds with vulnerability scans, gitleaks, and `terraform fmt`, `validate`, `tflint` and `checkov`. The jobs that need AWS (PR `terraform plan`, ECR push, deploys) are written but show as **skipped**, because the AWS role variables in step 2 are not set. Steps 1 and 2 switch them on.
+
+To deploy it for real:
 
 1. **Bootstrap (once per AWS account):**
    ```bash
@@ -144,7 +149,7 @@ scripts/deploy.sh staging <git-sha>   # images for <git-sha> must already be in 
 
 ```mermaid
 flowchart LR
-  pr[Pull request] --> ci["CI · lint · test · hadolint<br/>build arm64 + Trivy · gitleaks<br/>fmt · validate · tflint · checkov<br/>terraform plan → PR comment"]
+  pr[Pull request] --> ci["CI · lint · test · hadolint<br/>build arm64 + Trivy · gitleaks<br/>fmt · validate · tflint · checkov<br/>terraform plan → PR comment *"]
   ci --> merge[Merge to main]
   merge --> build[Build once<br/>push :git-sha to ECR]
   build --> stg[Deploy staging]
@@ -156,7 +161,7 @@ flowchart LR
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | pull request | ruff + pytest; eslint + `node:test`; hadolint; native **ARM64** image builds with a Trivy scan (HIGH/CRITICAL fail the build); gitleaks; `terraform fmt`, `validate`, `tflint` (AWS ruleset), `checkov`; and `terraform plan` for both environments, posted as a **PR comment** |
+| [`ci.yml`](.github/workflows/ci.yml) | pull request | ruff + pytest; eslint + `node:test`; hadolint; native **ARM64** image builds with a Trivy scan (HIGH/CRITICAL fail the build); gitleaks; `terraform fmt`, `validate`, `tflint` (AWS ruleset), `checkov`; and `terraform plan` for both environments, posted as a **PR comment** (* once the AWS roles are configured, see [Deploy](#deploy)) |
 | [`deploy.yml`](.github/workflows/deploy.yml) | merge to `main` | Build each image **once**, push it tagged with the commit SHA, deploy to staging, then the **same image** to production after approval |
 | [`_deploy.yml`](.github/workflows/_deploy.yml) | called by deploy and rollback | Runs `scripts/deploy.sh` or `rollback.sh` in the GitHub environment; **auto-rolls back** if anything fails |
 | [`rollback.yml`](.github/workflows/rollback.yml) | manual | One-click rollback to the previous release or a chosen SHA |
@@ -182,6 +187,26 @@ There are three layers, and the RUNBOOK explains how to choose between them ([RU
 1. **Automatic, ECS:** the deployment circuit breaker detects new tasks failing health checks and reverts to the last working task definition.
 2. **Automatic, pipeline:** if the deploy or smoke test fails after apply, `_deploy.yml` redeploys the last known-good release from SSM and leaves the run red.
 3. **Manual, one click:** **Actions → Rollback** with an environment and either nothing (the previous release) or any SHA still in ECR (the last 30 are kept). From a terminal: `scripts/rollback.sh production [sha]`.
+
+**See it work locally (no AWS needed):** `make rollback-demo`. Docker Compose stands in for ECS and the nginx proxy for the ALB. The tags, the smoke test (`scripts/smoke-test.sh`, the same script the pipeline uses) and the rollback logic are the real ones:
+
+```
+==> Deploying v3
+wait /orders: want 200 + version v3, got HTTP 400, version v3 (attempt 1/3)
+...
+FAIL /orders is not serving v3
+Container health checks at this moment (all green, yet users get errors):
+   notify-svc: Up 38 seconds (healthy)
+   orders-api: Up 37 seconds (healthy)
+==> Smoke test FAILED for v3: automatic rollback to last known-good v2
+OK   /orders -> 200, version v2
+OK   /notify -> 200, version v2
+==> Manual rollback to the previous release (v1), as with: scripts/rollback.sh <env>
+OK   /orders -> 200, version v1
+OK   /notify -> 200, version v1
+```
+
+Release v3 has a bad configuration that **passes health checks but breaks every `/orders` request**. ECS's circuit breaker can't catch that kind of failure; the version-checked smoke test and automatic rollback can.
 
 **A rollback is the same deploy script run with an older immutable tag.** It isn't a separate procedure: it goes through the same plan, apply, steady-state wait and version-checked smoke test, so it gets exercised on every deploy instead of only during an incident. Rollbacks skip migrations. Schema changes follow *expand/contract*, so the previous release always works on the newer schema.
 
@@ -286,4 +311,4 @@ Ordered by value:
 6. **Security depth:** ALB access logs, end-to-end TLS to the tasks, RDS IAM authentication, customer-managed KMS keys, GuardDuty, Security Hub, AWS Config, CloudTrail organization trail, image signing (cosign) with verification at deploy.
 7. **Data protection:** AWS Backup plans with cross-region or cross-account copies, monthly snapshots kept for a year, cross-region replication for the state bucket, and a quarterly restore drill.
 8. **Cost visibility:** Infracost comments on PRs, AWS Budgets alerts, and the scheduled staging shutdown above.
-9. **Developer experience:** ephemeral preview environments per PR, and a local ALB-like reverse proxy in compose so `/orders` and `/notify` share one port, as in AWS.
+9. **Developer experience:** ephemeral preview environments per PR.
