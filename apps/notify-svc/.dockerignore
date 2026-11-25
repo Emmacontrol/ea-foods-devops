@@ -1,0 +1,7 @@
+node_modules
+test
+coverage
+eslint.config.js
+.env
+Dockerfile
+.dockerignore
