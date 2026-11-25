@@ -131,6 +131,8 @@ resource "aws_iam_role" "deploy" {
 }
 
 data "aws_iam_policy_document" "deploy" {
+  #checkov:skip=CKV_AWS_111:Terraform deployer must create resources whose ARNs are unknown up front; constrained by region, IAM role-name prefix and a deny on secret values.
+  #checkov:skip=CKV_AWS_356:Same as above. Hard isolation between environments = separate AWS accounts (README: production additions).
   for_each = var.environments
 
   # Terraform manages these services, in this region only.
