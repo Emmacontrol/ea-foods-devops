@@ -9,6 +9,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+# AWS RDS certificate authority bundle, so the app can verify the database's TLS certificate.
+RUN python -c "import urllib.request; urllib.request.urlretrieve('https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem', '/rds-global-bundle.pem')"
 
 # ---- Stage 2: minimal runtime — no compilers, no pip cache, no build files ----
 FROM python:${PYTHON_VERSION}-slim AS runtime
@@ -23,6 +25,7 @@ RUN groupadd --system --gid 10001 app \
 
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /rds-global-bundle.pem /app/certs/rds-global-bundle.pem
 # Code stays root-owned (read-only for the app user): a compromised process can't modify it.
 COPY manage.py ./
 COPY orders_api ./orders_api

@@ -46,6 +46,10 @@ if os.environ.get("DB_HOST"):
             "OPTIONS": {"charset": "utf8mb4"},
         }
     }
+    # In AWS, RDS enforces TLS (require_secure_transport=1). DB_SSL_CA points at the
+    # RDS CA bundle baked into the image, so the server certificate is verified.
+    if os.environ.get("DB_SSL_CA"):
+        DATABASES["default"]["OPTIONS"]["ssl"] = {"ca": os.environ["DB_SSL_CA"]}
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
