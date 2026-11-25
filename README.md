@@ -22,7 +22,25 @@ RUNBOOK.md         Point-in-time DB restore, rolling back a bad release
 
 ## Run locally
 
-<!-- TODO Phase 1 -->
+Requirements: Docker with Compose v2.
+
+```bash
+make up          # builds images, starts MySQL, runs migrations, starts both services
+curl localhost:8000/health   # {"status": "ok", "service": "orders-api", "version": "local"}
+curl localhost:8000/orders   # 3 seeded orders read from MySQL
+curl localhost:3000/notify   # {"status":"sent", ...} — and one JSON log line per request
+make logs        # tail logs
+make down        # stop and delete the local database volume
+```
+
+Unit tests: `make test` (orders-api uses SQLite for tests; notify-svc uses the built-in `node:test` runner).
+
+| Image | Base (final stage) | Size | Runs as |
+|---|---|---|---|
+| orders-api | `python:3.13-slim` | ~187 MB | uid 10001 |
+| notify-svc | `gcr.io/distroless/nodejs24-debian12:nonroot` | ~154 MB | uid 65532 (nonroot) |
+
+Local containers mirror production hardening: read-only root filesystem, all Linux capabilities dropped, `no-new-privileges`, and migrations as a one-off job rather than on app start-up.
 
 ## Architecture
 

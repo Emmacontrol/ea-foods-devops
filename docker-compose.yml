@@ -1,0 +1,66 @@
+# Local environment: both services + MySQL. Mirrors production where it matters:
+# migrations run as a one-off job, containers are non-root with a read-only root FS.
+# Defaults are LOCAL-ONLY throwaway values; override them in a .env file (see .env.example).
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  tmpfs: ["/tmp"]
+
+x-orders-env: &orders-env
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_NAME: orders
+  DB_USER: orders
+  DB_PASSWORD: ${DB_PASSWORD:-local-dev-password}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-dev-secret-key}
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+  APP_VERSION: local
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: orders
+      MYSQL_USER: orders
+      MYSQL_PASSWORD: ${DB_PASSWORD:-local-dev-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-dev-root-password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-off job, same as the ECS migration task the pipeline runs before each deploy.
+  migrate:
+    build: ./apps/orders-api
+    image: orders-api:local
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    environment: *orders-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    <<: *hardening
+
+  orders-api:
+    image: orders-api:local
+    environment: *orders-env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    <<: *hardening
+
+  notify-svc:
+    build: ./apps/notify-svc
+    image: notify-svc:local
+    environment:
+      APP_VERSION: local
+    ports: ["3000:3000"]
+    <<: *hardening
+
+volumes:
+  mysql-data:
