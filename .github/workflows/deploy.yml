@@ -1,0 +1,74 @@
+# Merge to main: build each image ONCE, push it to ECR tagged with the commit SHA,
+# deploy it to staging, then promote the SAME image to production after manual approval.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two deploys of main at once; queue instead of cancelling a deploy mid-flight.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+
+jobs:
+  build-push:
+    name: ${{ matrix.service }} · build + push
+    # Runs once infra/bootstrap is applied and its outputs are set as repository variables.
+    if: vars.AWS_ECR_PUSH_ROLE_ARN != ''
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      id-token: write # OIDC -> ecr-push role (trusted from refs/heads/main only)
+    strategy:
+      matrix:
+        service: [orders-api, notify-svc]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ECR_PUSH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@7290e214a610b32bc0eef81748948b6d466a8783 # v2.2.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: apps/${{ matrix.service }}
+          platforms: linux/arm64
+          push: true
+          # Immutable tag = commit SHA: every running version maps to exact source code.
+          tags: ${{ steps.ecr.outputs.registry }}/ea-foods/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy-staging:
+    needs: build-push
+    # Real deploys create billable infrastructure; switched on with a repository variable.
+    if: vars.DEPLOY_ENABLED == 'true'
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: staging
+      image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      id-token: write
+
+  deploy-production:
+    needs: deploy-staging
+    # The "production" GitHub environment has required reviewers: this job waits for approval.
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: production
+      image_tag: ${{ github.sha }}
+    permissions:
+      contents: read
+      id-token: write

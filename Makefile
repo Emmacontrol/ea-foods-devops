@@ -35,8 +35,8 @@ plan: ## terraform plan for ENV (needs TF_STATE_BUCKET and IMAGE_TAG)
 
 security-scan: ## checkov (Terraform) + trivy (images) + gitleaks (history)
 	checkov -d infra --framework terraform --quiet --compact
-	trivy image --severity HIGH,CRITICAL --ignore-unfixed orders-api:local
-	trivy image --severity HIGH,CRITICAL --ignore-unfixed notify-svc:local
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed --ignorefile .trivyignore orders-api:local
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed --ignorefile .trivyignore notify-svc:local
 	gitleaks git . --no-banner
 
 .PHONY: help up down logs test lint tf-validate plan security-scan

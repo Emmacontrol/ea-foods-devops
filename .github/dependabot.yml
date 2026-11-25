@@ -1,0 +1,31 @@
+# Keeps pinned versions (action SHAs, base images, packages, providers) up to date
+# through reviewed pull requests, which run the full CI.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories: [/apps/orders-api, /apps/notify-svc]
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: pip
+    directory: /apps/orders-api
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /apps/notify-svc
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: terraform
+    directories: [/infra/bootstrap, /infra/envs/staging, /infra/envs/production]
+    schedule:
+      interval: weekly

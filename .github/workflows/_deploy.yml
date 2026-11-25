@@ -1,0 +1,74 @@
+# Reusable: deploy (or roll back) one environment to one image tag.
+# Called by deploy.yml and rollback.yml so both use exactly the same path.
+name: _deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      image_tag:
+        description: Git SHA to deploy. May be empty for a rollback (= previous release).
+        type: string
+        required: false
+        default: ""
+      rollback:
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: ${{ inputs.rollback && 'rollback' || 'deploy' }} · ${{ inputs.environment }}
+    runs-on: ubuntu-24.04
+    # Binds the job to the GitHub environment: environment-scoped variables, the
+    # OIDC sub claim "environment:<name>" (matched by that env's IAM role), and
+    # protection rules (required reviewers on production).
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      # Passed via env (not inline ${{ }}) so inputs can never be interpreted as shell code.
+      TARGET_ENV: ${{ inputs.environment }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: gha-${{ inputs.environment }}-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+
+      - name: Deploy
+        if: ${{ !inputs.rollback }}
+        run: scripts/deploy.sh "$TARGET_ENV" "$IMAGE_TAG"
+
+      - name: Roll back
+        if: ${{ inputs.rollback }}
+        run: scripts/rollback.sh "$TARGET_ENV" "$IMAGE_TAG"
+
+      # ECS's circuit breaker already reverts tasks that fail health checks. This catches
+      # everything else (e.g. smoke test failure): redeploy the last known-good release.
+      - name: Automatic rollback to last known-good release
+        if: ${{ failure() && !inputs.rollback }}
+        run: |
+          good="$(aws ssm get-parameter --name "/ea-foods/${TARGET_ENV}/image-tag" --query Parameter.Value --output text 2>/dev/null || true)"
+          if [ -z "$good" ]; then
+            echo "::error::Deploy failed and no previous release is recorded (first deploy) - nothing to roll back to."
+            exit 1
+          fi
+          echo "::warning::Deploy of ${IMAGE_TAG} to ${TARGET_ENV} failed - rolling back to ${good}"
+          scripts/rollback.sh "$TARGET_ENV" "$good"
+          exit 1 # keep the run red: a rollback is an incident, not a success
