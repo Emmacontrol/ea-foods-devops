@@ -8,7 +8,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force && mkdir -p node_modules
 
 # ---- Stage 2: distroless runtime — no shell, no package manager, non-root (uid 65532) ----
-FROM gcr.io/distroless/nodejs24-debian12:nonroot AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot AS runtime
 ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
 
-USER nonroot
+USER 65532:65532
 EXPOSE 3000
 
 # Used by docker compose; ECS uses the health check in the task definition.

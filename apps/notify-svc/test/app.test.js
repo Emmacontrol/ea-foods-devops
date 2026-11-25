@@ -37,6 +37,11 @@ test('GET /notify returns sent', async () => {
   assert.equal((await res.json()).status, 'sent');
 });
 
+test('every response carries x-app-version', async () => {
+  const res = await fetch(`${baseUrl}/notify`);
+  assert.equal(res.headers.get('x-app-version'), 'dev');
+});
+
 test('unknown path is 404, non-GET is 405', async () => {
   assert.equal((await fetch(`${baseUrl}/nope`)).status, 404);
   assert.equal((await fetch(`${baseUrl}/notify`, { method: 'POST' })).status, 405);

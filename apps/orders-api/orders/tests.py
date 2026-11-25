@@ -18,6 +18,13 @@ def test_orders_lists_seeded_rows(client):
 
 
 @pytest.mark.django_db
+def test_every_response_carries_app_version(client, settings):
+    settings.APP_VERSION = "abc1234"
+    assert client.get("/orders")["X-App-Version"] == "abc1234"
+    assert client.get("/health")["X-App-Version"] == "abc1234"
+
+
+@pytest.mark.django_db
 def test_orders_rejects_post(client):
     assert client.post("/orders").status_code == 405
 
